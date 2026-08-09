@@ -43,6 +43,7 @@ style.css             feuille de style unique
 favicon.svg           favicon (carré + symbole NFC)
 robots.txt
 sitemap.xml
+
 ```
 
 ## Notes
