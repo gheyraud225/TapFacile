@@ -98,6 +98,10 @@ textarea:focus-visible {
   height: 24px;
 }
 
+.logo-icon .wave {
+  transition: opacity 200ms ease;
+}
+
 .header-phone {
   font-weight: 600;
   text-decoration: none;
@@ -115,6 +119,25 @@ textarea:focus-visible {
 .hero {
   padding: 56px 0 48px;
   border-bottom: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 32px;
+}
+
+.hero-visual {
+  color: var(--accent);
+  max-width: 220px;
+  margin: 0 auto;
+}
+
+.hero-illustration {
+  width: 100%;
+  height: auto;
 }
 
 .hero h1 {
@@ -384,6 +407,56 @@ textarea {
   margin: 4px 0 0;
 }
 
+/* Qui suis-je */
+.qui-suis-je-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.founder-photo {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  filter: grayscale(100%);
+  background: var(--accent-tint);
+}
+
+#qui-suis-je h2 {
+  margin-bottom: 12px;
+}
+
+#qui-suis-je p {
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+}
+
+/* QR demo */
+.qr-demo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+.qr-demo-code {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  width: fit-content;
+}
+
+.qr-demo-code svg {
+  display: block;
+}
+
+#essai h2 {
+  margin-bottom: 8px;
+}
+
 /* Footer */
 .site-footer {
   padding: 32px 0;
@@ -469,10 +542,77 @@ textarea {
   .contact-grid {
     grid-template-columns: 1fr 1fr;
   }
+
+  .qui-suis-je-grid {
+    grid-template-columns: 120px 1fr;
+  }
+
+  .qr-demo {
+    grid-template-columns: auto 1fr;
+  }
 }
 
 @media (min-width: 900px) {
   .hero h1 {
     font-size: 52px;
+  }
+
+  .hero-grid {
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 48px;
+  }
+
+  .hero-visual {
+    max-width: 280px;
+    margin: 0;
+  }
+}
+
+/* Motion: on-load reveal and NFC hover pulse, both skipped for prefers-reduced-motion */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .hero-text > * {
+    animation: fade-in-up 500ms ease both;
+  }
+
+  .hero-text > *:nth-child(2) {
+    animation-delay: 90ms;
+  }
+
+  .hero-text > *:nth-child(3) {
+    animation-delay: 180ms;
+  }
+
+  .hero-visual {
+    animation: fade-in-up 600ms ease 120ms both;
+  }
+
+  @keyframes nfc-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.3;
+    }
+  }
+
+  .logo:hover .wave-1,
+  .logo:focus-visible .wave-1 {
+    animation: nfc-pulse 900ms ease-in-out infinite;
+  }
+
+  .logo:hover .wave-2,
+  .logo:focus-visible .wave-2 {
+    animation: nfc-pulse 900ms ease-in-out infinite 150ms;
   }
 }

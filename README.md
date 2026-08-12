@@ -26,11 +26,13 @@ Rechercher chacun des tokens suivants dans tous les fichiers et les remplacer :
 | `FORMSPREE_ID` | index.html | Identifiant de formulaire Formspree (créer un formulaire sur formspree.io, copier l'ID dans l'URL d'action) |
 | `CODE_POSTAL` | index.html (JSON-LD) | Code postal |
 | `LATITUDE` / `LONGITUDE` | index.html (JSON-LD) | Coordonnées GPS du lieu d'activité |
+| `LINKEDIN_URL` | index.html (section « Qui suis-je ») | Lien vers votre profil LinkedIn |
+| `photo-fondateur.jpg` | fichier à ajouter à la racine, référencé dans index.html | Une photo de vous, format carré si possible. La photo est affichée en niveaux de gris (`filter: grayscale`) pour rester cohérente avec la palette du site — inutile de la désaturer vous-même. |
 
-Commande utile pour les repérer tous :
+Commande utile pour repérer les placeholders texte :
 
 ```
-grep -rn "NOM\|ADRESSE\|TELEPHONE\|EMAIL\|FORMSPREE_ID\|CODE_POSTAL\|LATITUDE\|LONGITUDE" *.html
+grep -rn "NOM\|ADRESSE\|TELEPHONE\|EMAIL\|FORMSPREE_ID\|CODE_POSTAL\|LATITUDE\|LONGITUDE\|LINKEDIN_URL" *.html
 ```
 
 ## Structure
@@ -41,10 +43,15 @@ confidentialite.html  politique de confidentialité (LPD)
 mentions.html         mentions légales
 style.css             feuille de style unique
 favicon.svg           favicon (carré + symbole NFC)
+photo-fondateur.jpg    à ajouter (voir placeholders ci-dessus)
 robots.txt
 sitemap.xml
 
 ```
+
+## QR code de démonstration
+
+La section « Essayez le geste » contient un QR code réel (SVG généré, pas d'image externe) qui pointe vers `https://tapfacile.ch/?demo=qr` — le site lui-même. Un visiteur peut donc scanner et vivre exactement le geste qu'un client ferait avec le chevalet, sans qu'il soit nécessaire d'inventer une fausse fiche commerçant. Si vous changez de domaine, régénérez ce QR code (le SVG est un simple chemin de carrés, pas de dépendance à une lib externe).
 
 ## Notes
 
