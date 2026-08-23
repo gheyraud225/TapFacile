@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/",
+    "/index.html",
+    "/confidentialite",
+    "/confidentialite.html",
+    "/mentions",
+    "/mentions.html",
+    "/style.css",
+    "/favicon.svg",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/photo-fondateur.jpg",
+    "/README.md",
+    "/schema.sql",
+    "/CNAME",
+    "/admin",
+    "/admin/*",
+    "/lib/*"
+  ]
+}

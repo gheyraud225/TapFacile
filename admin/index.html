@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="fr-CH">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administration — tapfacile</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+:root{
+  --ink:#1c1f22;--ink-soft:#4a5158;--line:#dfe2e5;--paper:#fafaf9;
+  --accent:#2b3a4a;--accent-dark:#1c2733;--accent-tint:#eef1f4;
+  --alerte:#8a2b2b;--ok:#2f4a3c;--radius:4px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 var(--font);color:var(--ink);background:#fff;-webkit-text-size-adjust:100%}
+.enveloppe{max-width:640px;margin:0 auto;padding:0 16px 96px}
+
+header.barre{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line)}
+header.barre .enveloppe{display:flex;align-items:center;gap:12px;height:56px;padding-bottom:0}
+header.barre h1{font-size:17px;margin:0;font-weight:700;flex:1}
+.retour{background:none;border:0;font:inherit;color:var(--accent);padding:8px 4px;margin-left:-4px;cursor:pointer}
+
+h2{font-size:22px;margin:24px 0 4px;letter-spacing:-.01em}
+p.aide{color:var(--ink-soft);font-size:14px;margin:0 0 20px}
+
+.btn{display:inline-block;width:100%;font:600 16px/1 var(--font);text-align:center;padding:16px 20px;
+  border-radius:var(--radius);border:1px solid transparent;cursor:pointer;text-decoration:none;
+  transition:background-color 120ms ease,border-color 120ms ease,color 120ms ease}
+.btn-primaire{background:var(--accent);color:#fff}
+.btn-primaire:hover{background:var(--accent-dark)}
+.btn-secondaire{background:#fff;color:var(--accent);border-color:var(--accent)}
+.btn-secondaire:hover{background:var(--accent-tint)}
+.btn-danger{background:#fff;color:var(--alerte);border-color:var(--alerte)}
+.btn-danger:hover{background:#fbf2f2}
+.btn+.btn{margin-top:10px}
+button:disabled{opacity:.5;cursor:default}
+
+label{display:block;font-size:14px;font-weight:600;margin:18px 0 6px}
+input,textarea,select{width:100%;font:16px var(--font);padding:14px 12px;border:1px solid var(--line);
+  border-radius:var(--radius);background:#fff;color:var(--ink)}
+textarea{min-height:88px;resize:vertical}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+ul.liste{list-style:none;margin:16px 0 0;padding:0;border-top:1px solid var(--line)}
+ul.liste li{border-bottom:1px solid var(--line)}
+ul.liste button{display:flex;width:100%;align-items:center;gap:12px;background:none;border:0;
+  font:inherit;color:inherit;text-align:left;padding:16px 4px;cursor:pointer}
+ul.liste button:hover{background:var(--paper)}
+.nom{flex:1;font-weight:600}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:var(--ink-soft);
+  letter-spacing:.08em}
+.compte{font-size:13px;color:var(--ink-soft);white-space:nowrap}
+.puce{font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:3px 7px;border-radius:3px;
+  background:var(--accent-tint);color:var(--accent)}
+.puce.inactif{background:#f4eaea;color:var(--alerte)}
+
+.encart{border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:20px 0}
+.encart h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+.adresse{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.adresse code{flex:1;min-width:180px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:14px;word-break:break-all}
+.adresse button{flex:none;width:auto;padding:10px 14px;font-size:14px}
+.qr{display:block;width:180px;max-width:100%;margin:12px auto;border:1px solid var(--line)}
+
+.chiffres{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.chiffres div{background:#fff;padding:14px 10px;text-align:center}
+.chiffres strong{display:block;font-size:24px;line-height:1.1}
+.chiffres span{font-size:12px;color:var(--ink-soft)}
+
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:15px}
+th,td{text-align:left;padding:10px 4px;border-bottom:1px solid var(--line)}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:600}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+
+.lien-ligne{display:grid;grid-template-columns:1fr;gap:8px;border:1px solid var(--line);
+  border-radius:var(--radius);padding:12px;margin-bottom:10px}
+.lien-ligne input{padding:12px}
+.lien-ligne button{width:auto;justify-self:start;background:none;border:0;color:var(--alerte);
+  font:600 14px var(--font);padding:4px;cursor:pointer}
+
+.message{padding:12px 14px;border-radius:var(--radius);margin:16px 0;font-size:15px}
+.message.erreur{background:#fbf2f2;color:var(--alerte);border:1px solid #e6cfcf}
+.message.succes{background:#eef2ef;color:var(--ok);border:1px solid #cfdcd4}
+.note-conformite{font-size:13px;color:var(--ink-soft);border-left:2px solid var(--line);
+  padding-left:12px;margin:20px 0}
+.masque{display:none}
+.pied{margin-top:32px;text-align:center}
+.pied button{width:auto;background:none;border:0;color:var(--ink-soft);font:14px var(--font);
+  text-decoration:underline;cursor:pointer;padding:8px}
+</style>
+</head>
+<body>
+
+<header class="barre">
+  <div class="enveloppe">
+    <button type="button" class="retour masque" id="retour">&larr; Retour</button>
+    <h1 id="titre">tapfacile</h1>
+  </div>
+</header>
+
+<main class="enveloppe">
+
+  <!-- Authentification -->
+  <section id="vue-auth">
+    <h2>Administration</h2>
+    <p class="aide">Entrez le jeton d'administration pour accéder aux plaques.</p>
+    <form id="form-auth">
+      <label for="jeton">Jeton</label>
+      <input type="password" id="jeton" autocomplete="current-password" required>
+      <p></p>
+      <button class="btn btn-primaire" type="submit">Ouvrir</button>
+    </form>
+    <div id="auth-message"></div>
+  </section>
+
+  <!-- Liste -->
+  <section id="vue-liste" class="masque">
+    <h2>Plaques</h2>
+    <p class="aide" id="liste-resume">Chargement…</p>
+    <button class="btn btn-primaire" id="btn-nouveau" type="button">Nouveau commerce</button>
+    <ul class="liste" id="liste"></ul>
+  </section>
+
+  <!-- Détail -->
+  <section id="vue-detail" class="masque">
+    <h2 id="detail-nom"></h2>
+    <p class="aide" id="detail-meta"></p>
+
+    <div class="encart">
+      <h3>Adresse de la plaque</h3>
+      <div class="adresse">
+        <code id="detail-url"></code>
+        <button class="btn btn-secondaire" type="button" id="btn-copier">Copier</button>
+      </div>
+      <p class="aide" style="margin:10px 0 0">Écrivez cette adresse sur la puce NFC. Elle ne changera jamais, même si vous modifiez la destination.</p>
+    </div>
+
+    <div class="encart">
+      <h3>QR code</h3>
+      <img class="qr" id="detail-qr" alt="QR code de la plaque">
+      <button class="btn btn-secondaire" type="button" id="btn-qr">Télécharger le SVG</button>
+    </div>
+
+    <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)">Utilisation</h3>
+    <div class="chiffres">
+      <div><strong id="stat-7">–</strong><span>7 jours</span></div>
+      <div><strong id="stat-30">–</strong><span>30 jours</span></div>
+      <div><strong id="stat-total">–</strong><span>total</span></div>
+    </div>
+    <div id="detail-tableaux"></div>
+
+    <button class="btn btn-secondaire" type="button" id="btn-modifier" style="margin-top:24px">Modifier</button>
+  </section>
+
+  <!-- Formulaire -->
+  <section id="vue-form" class="masque">
+    <h2 id="form-titre">Nouveau commerce</h2>
+    <p class="aide" id="form-aide">Le code court est attribué automatiquement et reste permanent.</p>
+    <form id="form-client">
+      <label for="f-nom">Nom du commerce</label>
+      <input type="text" id="f-nom" maxlength="120" required>
+
+      <label for="f-avis">Lien de la page d'avis Google</label>
+      <input type="url" id="f-avis" inputmode="url" placeholder="https://…" required>
+
+      <label for="f-mode">Ce que voit le client</label>
+      <select id="f-mode">
+        <option value="redirect">Redirection directe vers les avis</option>
+        <option value="page">Page de liens (avis + réseaux sociaux)</option>
+      </select>
+
+      <div id="bloc-liens" class="masque">
+        <label>Liens supplémentaires</label>
+        <div id="liens"></div>
+        <button class="btn btn-secondaire" type="button" id="btn-ajout-lien">Ajouter un lien</button>
+      </div>
+
+      <label for="f-note">Note interne</label>
+      <textarea id="f-note" maxlength="500" placeholder="Jamais affichée au client."></textarea>
+
+      <div id="bloc-actif" class="masque">
+        <label for="f-actif">État</label>
+        <select id="f-actif">
+          <option value="1">Active</option>
+          <option value="0">Désactivée</option>
+        </select>
+      </div>
+
+      <p class="note-conformite">
+        Une seule destination pour tous les clients. Ne créez pas de page qui trie les clients
+        selon leur satisfaction avant de proposer l'avis : Google l'interdit et fait supprimer
+        les avis concernés.
+      </p>
+
+      <button class="btn btn-primaire" type="submit" id="btn-enregistrer">Enregistrer</button>
+    </form>
+    <div id="form-message"></div>
+  </section>
+
+  <div class="pied">
+    <button type="button" id="btn-deconnexion" class="masque">Se déconnecter</button>
+  </div>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const CLE_JETON = 'tapfacile.jeton';
+  const vues = {
+    auth: document.getElementById('vue-auth'),
+    liste: document.getElementById('vue-liste'),
+    detail: document.getElementById('vue-detail'),
+    form: document.getElementById('vue-form'),
+  };
+  const btnRetour = document.getElementById('retour');
+  const btnDeconnexion = document.getElementById('btn-deconnexion');
+  const titre = document.getElementById('titre');
+
+  let jeton = lireJetonStocke();
+  let codeCourant = null;   // code en cours de consultation
+  let editionCode = null;   // null = création, sinon modification
+  let urlQr = null;
+
+  /* ---------------------------------------------------------- utilitaires */
+
+  function lireJetonStocke() {
+    try { return localStorage.getItem(CLE_JETON) || null; } catch { return null; }
+  }
+  function ecrireJetonStocke(valeur) {
+    try { valeur ? localStorage.setItem(CLE_JETON, valeur) : localStorage.removeItem(CLE_JETON); }
+    catch { /* navigation privée : le jeton reste en mémoire pour la session */ }
+  }
+
+  function montrer(nom) {
+    Object.entries(vues).forEach(([cle, section]) => section.classList.toggle('masque', cle !== nom));
+    btnRetour.classList.toggle('masque', nom === 'auth' || nom === 'liste');
+    btnDeconnexion.classList.toggle('masque', nom === 'auth');
+    titre.textContent = nom === 'auth' ? 'tapfacile' : 'tapfacile — administration';
+    window.scrollTo(0, 0);
+  }
+
+  function message(conteneur, texte, type) {
+    conteneur.innerHTML = '';
+    if (!texte) return;
+    const div = document.createElement('div');
+    div.className = 'message ' + type;
+    div.textContent = texte;
+    conteneur.appendChild(div);
+  }
+
+  async function api(chemin, options = {}) {
+    const reponse = await fetch('/api' + chemin, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: 'Bearer ' + jeton,
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      },
+    });
+    if (reponse.status === 401) {
+      jeton = null;
+      ecrireJetonStocke(null);
+      montrer('auth');
+      throw new Error('Jeton refusé.');
+    }
+    if (options.brut) {
+      if (!reponse.ok) throw new Error('Erreur ' + reponse.status);
+      return reponse;
+    }
+    const donnees = await reponse.json().catch(() => ({}));
+    if (!reponse.ok) throw new Error(donnees.erreur || 'Erreur ' + reponse.status);
+    return donnees;
+  }
+
+  const nombre = (v) => new Intl.NumberFormat('fr-CH').format(v || 0);
+
+  /* ------------------------------------------------------------ connexion */
+
+  document.getElementById('form-auth').addEventListener('submit', async (evenement) => {
+    evenement.preventDefault();
+    const champ = document.getElementById('jeton');
+    jeton = champ.value.trim();
+    const zone = document.getElementById('auth-message');
+    message(zone, '', '');
+    try {
+      await api('/clients');
+      ecrireJetonStocke(jeton);
+      champ.value = '';
+      chargerListe();
+    } catch (erreur) {
+      message(zone, erreur.message, 'erreur');
+    }
+  });
+
+  btnDeconnexion.addEventListener('click', () => {
+    jeton = null;
+    ecrireJetonStocke(null);
+    montrer('auth');
+  });
+
+  /* ---------------------------------------------------------------- liste */
+
+  async function chargerListe() {
+    montrer('liste');
+    const liste = document.getElementById('liste');
+    const resume = document.getElementById('liste-resume');
+    liste.innerHTML = '';
+    resume.textContent = 'Chargement…';
+
+    try {
+      const { clients } = await api('/clients');
+      const actifs = clients.filter((c) => c.actif).length;
+      resume.textContent = clients.length
+        ? `${clients.length} plaque${clients.length > 1 ? 's' : ''}, ${actifs} active${actifs > 1 ? 's' : ''}.`
+        : 'Aucune plaque pour le moment.';
+
+      clients.forEach((client) => {
+        const li = document.createElement('li');
+        const bouton = document.createElement('button');
+        bouton.type = 'button';
+        bouton.addEventListener('click', () => chargerDetail(client.code));
+
+        const nom = document.createElement('span');
+        nom.className = 'nom';
+        nom.textContent = client.nom_commerce;
+
+        const code = document.createElement('span');
+        code.className = 'code';
+        code.textContent = client.code;
+
+        const compte = document.createElement('span');
+        compte.className = 'compte';
+        compte.textContent = nombre(client.trente_jours) + ' / 30 j';
+
+        bouton.append(nom, code, compte);
+        if (!client.actif) {
+          const puce = document.createElement('span');
+          puce.className = 'puce inactif';
+          puce.textContent = 'inactive';
+          bouton.appendChild(puce);
+        }
+        li.appendChild(bouton);
+        liste.appendChild(li);
+      });
+    } catch (erreur) {
+      resume.textContent = erreur.message;
+    }
+  }
+
+  /* --------------------------------------------------------------- détail */
+
+  async function chargerDetail(code) {
+    codeCourant = code;
+    montrer('detail');
+    document.getElementById('detail-nom').textContent = '…';
+    document.getElementById('detail-tableaux').innerHTML = '';
+
+    const { client, statistiques } = await api('/clients/' + code);
+
+    document.getElementById('detail-nom').textContent = client.nom_commerce;
+    document.getElementById('detail-meta').textContent =
+      (client.actif ? 'Active' : 'Désactivée') +
+      ' · ' +
+      (client.mode === 'page' ? 'page de liens' : 'redirection directe') +
+      ' · créée le ' +
+      new Date(client.cree_le).toLocaleDateString('fr-CH');
+
+    const adresse = location.origin + '/' + client.code;
+    document.getElementById('detail-url').textContent = adresse;
+
+    document.getElementById('stat-7').textContent = nombre(statistiques.sept_jours);
+    document.getElementById('stat-30').textContent = nombre(statistiques.trente_jours);
+    document.getElementById('stat-total').textContent = nombre(statistiques.total);
+
+    const tableaux = document.getElementById('detail-tableaux');
+    tableaux.appendChild(construireTable('Par mois', statistiques.par_mois, 'mois'));
+    tableaux.appendChild(
+      construireTable(
+        'Par appareil',
+        statistiques.par_appareil.map((r) => ({ appareil: nomAppareil(r.appareil), n: r.n })),
+        'appareil',
+      ),
+    );
+    tableaux.appendChild(
+      construireTable('Par destination', statistiques.par_cible.map((r) => ({
+        cible: nomCible(r.cible, client),
+        n: r.n,
+      })), 'cible'),
+    );
+
+    chargerQr(client.code);
+  }
+
+  function nomAppareil(valeur) {
+    if (valeur === 'ios') return 'iPhone / iPad';
+    if (valeur === 'android') return 'Android';
+    return 'Autre';
+  }
+
+  function nomCible(cible, client) {
+    if (cible === 'avis') return "Page d'avis Google";
+    if (cible === 'page') return 'Ouverture de la page';
+    const index = Number.parseInt(cible.split(':')[1], 10);
+    const lien = (client.liens || [])[index];
+    return lien ? lien.label : 'Lien ' + index;
+  }
+
+  function construireTable(legende, lignes, cleLibelle) {
+    const bloc = document.createElement('div');
+    if (!lignes || !lignes.length) return bloc;
+    const table = document.createElement('table');
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>' + legende + '</th><th class="n">Utilisations</th></tr>';
+    const tbody = document.createElement('tbody');
+    lignes.forEach((ligne) => {
+      const tr = document.createElement('tr');
+      const td1 = document.createElement('td');
+      td1.textContent = ligne[cleLibelle];
+      const td2 = document.createElement('td');
+      td2.className = 'n';
+      td2.textContent = nombre(ligne.n);
+      tr.append(td1, td2);
+      tbody.appendChild(tr);
+    });
+    table.append(thead, tbody);
+    bloc.appendChild(table);
+    return bloc;
+  }
+
+  async function chargerQr(code) {
+    const image = document.getElementById('detail-qr');
+    if (urlQr) URL.revokeObjectURL(urlQr);
+    try {
+      const reponse = await api('/clients/' + code + '/qr.svg', { brut: true });
+      urlQr = URL.createObjectURL(await reponse.blob());
+      image.src = urlQr;
+    } catch {
+      image.removeAttribute('src');
+    }
+  }
+
+  document.getElementById('btn-copier').addEventListener('click', async (evenement) => {
+    const adresse = document.getElementById('detail-url').textContent;
+    const bouton = evenement.currentTarget;
+    try {
+      await navigator.clipboard.writeText(adresse);
+      bouton.textContent = 'Copié';
+    } catch {
+      bouton.textContent = 'Copie refusée';
+    }
+    setTimeout(() => { bouton.textContent = 'Copier'; }, 1600);
+  });
+
+  document.getElementById('btn-qr').addEventListener('click', () => {
+    if (!urlQr) return;
+    const lien = document.createElement('a');
+    lien.href = urlQr;
+    lien.download = 'tapfacile-' + codeCourant + '.svg';
+    lien.click();
+  });
+
+  /* ----------------------------------------------------------- formulaire */
+
+  document.getElementById('btn-nouveau').addEventListener('click', () => ouvrirFormulaire(null));
+  document.getElementById('btn-modifier').addEventListener('click', () => ouvrirFormulaire(codeCourant));
+
+  async function ouvrirFormulaire(code) {
+    editionCode = code;
+    montrer('form');
+    message(document.getElementById('form-message'), '', '');
+    document.getElementById('form-titre').textContent = code ? 'Modifier' : 'Nouveau commerce';
+    document.getElementById('bloc-actif').classList.toggle('masque', !code);
+    document.getElementById('liens').innerHTML = '';
+
+    if (!code) {
+      document.getElementById('form-aide').textContent =
+        'Le code court est attribué automatiquement et reste permanent.';
+      document.getElementById('f-nom').value = '';
+      document.getElementById('f-avis').value = '';
+      document.getElementById('f-mode').value = 'redirect';
+      document.getElementById('f-note').value = '';
+      basculerLiens();
+      return;
+    }
+
+    const { client } = await api('/clients/' + code);
+    document.getElementById('form-aide').textContent =
+      'Code ' + client.code + ' — permanent. La destination peut changer, le code non.';
+    document.getElementById('f-nom').value = client.nom_commerce;
+    document.getElementById('f-avis').value = client.avis_url;
+    document.getElementById('f-mode').value = client.mode;
+    document.getElementById('f-note').value = client.note || '';
+    document.getElementById('f-actif').value = client.actif ? '1' : '0';
+    (client.liens || []).forEach((lien) => ajouterLigneLien(lien.label, lien.url));
+    basculerLiens();
+  }
+
+  function ajouterLigneLien(label = '', url = '') {
+    const ligne = document.createElement('div');
+    ligne.className = 'lien-ligne';
+
+    const champLabel = document.createElement('input');
+    champLabel.type = 'text';
+    champLabel.placeholder = 'Intitulé (Instagram, Site internet…)';
+    champLabel.maxLength = 60;
+    champLabel.value = label;
+
+    const champUrl = document.createElement('input');
+    champUrl.type = 'url';
+    champUrl.inputMode = 'url';
+    champUrl.placeholder = 'https://…';
+    champUrl.value = url;
+
+    const supprimer = document.createElement('button');
+    supprimer.type = 'button';
+    supprimer.textContent = 'Supprimer';
+    supprimer.addEventListener('click', () => ligne.remove());
+
+    ligne.append(champLabel, champUrl, supprimer);
+    document.getElementById('liens').appendChild(ligne);
+  }
+
+  document.getElementById('btn-ajout-lien').addEventListener('click', () => ajouterLigneLien());
+  document.getElementById('f-mode').addEventListener('change', basculerLiens);
+
+  function basculerLiens() {
+    const page = document.getElementById('f-mode').value === 'page';
+    document.getElementById('bloc-liens').classList.toggle('masque', !page);
+  }
+
+  document.getElementById('form-client').addEventListener('submit', async (evenement) => {
+    evenement.preventDefault();
+    const zone = document.getElementById('form-message');
+    const bouton = document.getElementById('btn-enregistrer');
+    message(zone, '', '');
+    bouton.disabled = true;
+
+    const liens = [...document.querySelectorAll('#liens .lien-ligne')]
+      .map((ligne) => {
+        const champs = ligne.querySelectorAll('input');
+        return { label: champs[0].value.trim(), url: champs[1].value.trim() };
+      })
+      .filter((lien) => lien.label || lien.url);
+
+    const charge = {
+      nom_commerce: document.getElementById('f-nom').value.trim(),
+      avis_url: document.getElementById('f-avis').value.trim(),
+      mode: document.getElementById('f-mode').value,
+      liens: document.getElementById('f-mode').value === 'page' ? liens : [],
+      note: document.getElementById('f-note').value.trim(),
+    };
+    if (editionCode) charge.actif = document.getElementById('f-actif').value === '1';
+
+    try {
+      if (editionCode) {
+        await api('/clients/' + editionCode, { method: 'PUT', body: JSON.stringify(charge) });
+        await chargerDetail(editionCode);
+      } else {
+        const { code } = await api('/clients', { method: 'POST', body: JSON.stringify(charge) });
+        await chargerDetail(code);
+      }
+    } catch (erreur) {
+      message(zone, erreur.message, 'erreur');
+    } finally {
+      bouton.disabled = false;
+    }
+  });
+
+  /* ------------------------------------------------------------ navigation */
+
+  btnRetour.addEventListener('click', () => {
+    if (!vues.form.classList.contains('masque') && editionCode) chargerDetail(editionCode);
+    else chargerListe();
+  });
+
+  if (jeton) chargerListe().catch(() => montrer('auth'));
+  else montrer('auth');
+})();
+</script>
+</body>
+</html>

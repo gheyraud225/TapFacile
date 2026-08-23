@@ -1,0 +1,10 @@
+name = "tapfacile"
+compatibility_date = "2026-08-01"
+pages_build_output_dir = "."
+
+# Créer la base puis reporter l'identifiant renvoyé :
+#   wrangler d1 create tapfacile
+[[d1_databases]]
+binding = "DB"
+database_name = "tapfacile"
+database_id = "D1_DATABASE_ID"
