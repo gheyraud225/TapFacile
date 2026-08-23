@@ -2,9 +2,9 @@ name = "tapfacile"
 compatibility_date = "2026-08-01"
 pages_build_output_dir = "."
 
-# Créer la base puis reporter l'identifiant renvoyé :
-#   wrangler d1 create tapfacile
-[]
+# La double paire de crochets est obligatoire : elle déclare un élément de la liste
+# des bases D1. Ne pas la remplacer par [d1_databases] ni par [].
+[[d1_databases]]
 binding = "DB"
 database_name = "tapfacile"
 database_id = "973cd252-c74d-4fd7-be1a-39afb5940786"
