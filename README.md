@@ -54,49 +54,82 @@ que les bilans mensuels envoyés aux commerçants restent honnêtes.
 
 ## Déploiement
 
+Tout se fait depuis le dashboard Cloudflare, sans ligne de commande et sans copie
+locale du dépôt.
+
 ### 1. Créer la base D1
 
-```
-npx wrangler d1 create tapfacile
+**dash.cloudflare.com → Storage & Databases → D1 SQL Database** (selon l'interface :
+**Workers & Pages → D1**) → **Create** → nom `tapfacile`.
+
+Copier le **Database ID** affiché sur la page de la base. Ce n'est pas un secret, juste
+un identifiant.
+
+### 2. Reporter l'identifiant dans wrangler.toml
+
+Étape à ne pas sauter : lorsqu'un `wrangler.toml` est présent dans le dépôt, Cloudflare
+Pages l'utilise et **ignore les bindings configurés dans le dashboard**. Tant que le
+placeholder `D1_DATABASE_ID` y figure, la base n'est pas reliée et l'administration
+renvoie une erreur.
+
+Éditer `wrangler.toml` (directement sur GitHub) :
+
+```toml
+database_id = "identifiant-copié-à-l-étape-1"
 ```
 
-Reporter l'identifiant renvoyé dans `wrangler.toml`, à la place de `D1_DATABASE_ID`,
-puis créer les tables :
+### 3. Créer les tables
+
+Sur la page de la base → onglet **Console** → coller le contenu de `schema.sql` →
+**Execute**. Vérifier ensuite dans l'onglet **Tables** que `clients` et `visites`
+existent.
+
+En ligne de commande depuis une copie locale du dépôt, l'équivalent est :
 
 ```
 npx wrangler d1 execute tapfacile --remote --file=./schema.sql
 ```
 
-### 2. Créer le projet Pages
+### 4. Créer le projet Pages
 
-Dans le dashboard Cloudflare : **Workers & Pages → Créer → Pages → Connecter à Git**,
-sélectionner ce dépôt.
+**Workers & Pages → Create → Pages → Connect to Git**, sélectionner ce dépôt.
 
+- Production branch : la branche par défaut du dépôt
 - Framework preset : None
 - Build command : (vide, aucun build)
 - Build output directory : `/`
 
-### 3. Lier la base au projet
+### 5. Définir le jeton d'administration
 
-**Paramètres du projet Pages → Bindings → D1 database** : nom de variable `DB`,
-base `tapfacile`. À faire pour l'environnement de production *et* de prévisualisation.
+Générer une valeur aléatoire — sous PowerShell :
 
-### 4. Définir le jeton d'administration
-
+```powershell
+$b = New-Object byte[] 32
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+[Convert]::ToBase64String($b)
 ```
-npx wrangler pages secret put ADMIN_TOKEN --project-name tapfacile
-```
 
-Choisir une valeur longue et aléatoire, par exemple :
+ou, sous macOS et Linux :
 
 ```
 openssl rand -base64 32
 ```
 
+Puis, dans le projet Pages : **Settings → Variables and Secrets → Add**, type **Secret**
+(pas « Text »), nom `ADMIN_TOKEN`, valeur générée.
+
 Tant que `ADMIN_TOKEN` n'est pas défini, l'API d'administration refuse toutes les
 requêtes (erreur 503). C'est volontaire : jamais d'administration ouverte par défaut.
 
-### 5. Rattacher le domaine
+### 6. Redéployer
+
+Les bindings et les secrets ne s'appliquent qu'aux **nouveaux** déploiements :
+onglet **Deployments** → dernier déploiement → **Retry deployment**.
+
+Tester `https://<projet>.pages.dev/admin/` : le jeton doit être accepté et la liste
+s'afficher, vide.
+
+### 7. Rattacher le domaine
 
 **Custom domains → Set up a custom domain → `tapfacile.ch`.**
 
@@ -105,8 +138,18 @@ de `.ch`, mais ça n'a aucune importance ici. Seule la délégation DNS compte, 
 déjà en place. Le message « .ch domains aren't supported yet » concerne uniquement le
 transfert de la *propriété* du domaine, pas l'hébergement.
 
-Vérifier ensuite que le fichier `CNAME` (hérité de GitHub Pages) ne crée pas de
-confusion : il est sans effet sur Cloudflare Pages, on peut le laisser ou le supprimer.
+Désactiver ensuite GitHub Pages pour que les deux hébergements ne se disputent pas le
+domaine : dépôt GitHub → **Settings → Pages** → retirer le custom domain et passer la
+source sur **None**. Le fichier `CNAME` devient alors sans objet.
+
+### En cas d'erreur
+
+| Symptôme | Cause | Correction |
+|---|---|---|
+| `wrangler d1 create` → `Authentication error [code: 10000]` | Workers/D1 jamais activé sur le compte | Créer la base une première fois depuis le dashboard (étape 1) |
+| `Unable to read SQL text file "./schema.sql"` | Commande lancée hors du dépôt, ou pas de copie locale | Passer par la console D1 (étape 3) |
+| `/admin/` répond 503 | `ADMIN_TOKEN` absent | Étape 5, puis redéployer |
+| `/admin/` affiche une erreur de base | `D1_DATABASE_ID` encore en placeholder | Étape 2, puis redéployer |
 
 ## Administration
 
