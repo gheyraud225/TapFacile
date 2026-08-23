@@ -150,98 +150,225 @@ function analyserLiens(brut) {
 
 /* ------------------------------------------------------- pages du visiteur */
 
+// Feuille de style des pages vues par le client final. Elle est intégrée à la page
+// pour qu'un scan aboutisse en une seule requête, sans fichier CSS à charger.
 const STYLE_PUBLIC = `
-:root{--ink:#1c1f22;--ink-soft:#4a5158;--line:#dfe2e5;--accent:#2b3a4a;--accent-dark:#1c2733}
+:root{
+  --fond:#ffffff;--fond-doux:#f6f7f7;--encre:#1c1f22;--encre-douce:#5a6169;
+  --trait:#e4e7e9;--accent:#2b3a4a;--accent-vif:#1c2733;--sur-accent:#ffffff;--rayon:4px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --fond:#15181b;--fond-doux:#1c2024;--encre:#e9ebed;--encre-douce:#a2a9b0;
+    --trait:#2b3137;--accent:#4a6480;--accent-vif:#5c7896;--sur-accent:#ffffff;
+  }
+}
 *{box-sizing:border-box}
-body{margin:0;padding:32px 20px 48px;font:17px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:#fff}
-main{max-width:420px;margin:0 auto}
-h1{font-size:26px;line-height:1.2;margin:0 0 4px;letter-spacing:-.01em}
-p.intro{color:var(--ink-soft);margin:0 0 28px}
-a{color:var(--accent)}
-.principal{display:block;background:var(--accent);color:#fff;text-decoration:none;font-size:18px;font-weight:600;text-align:center;padding:18px 20px;border-radius:4px;transition:background-color 120ms ease}
-.principal:hover,.principal:focus-visible{background:var(--accent-dark)}
-ul{list-style:none;margin:28px 0 0;padding:0;border-top:1px solid var(--line)}
-li{border-bottom:1px solid var(--line)}
-li a{display:block;padding:16px 4px;text-decoration:none;font-weight:600;transition:color 120ms ease}
-li a:hover,li a:focus-visible{color:var(--accent-dark);text-decoration:underline}
-footer{margin-top:36px;font-size:13px;color:var(--ink-soft);text-align:center}
-footer a{color:var(--ink-soft)}
-a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-height:100vh;display:flex;flex-direction:column;
+  padding:calc(44px + env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom));
+  font:17px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  color:var(--encre);background:var(--fond);
+  -webkit-font-smoothing:antialiased;
+}
+main{width:100%;max-width:400px;margin:0 auto;flex:1}
+svg{display:block}
+
+.monogramme{
+  width:56px;height:56px;border-radius:var(--rayon);background:var(--accent);
+  color:var(--sur-accent);display:flex;align-items:center;justify-content:center;
+  font-size:21px;font-weight:600;letter-spacing:.03em;margin:0 0 22px;
+}
+h1{font-size:27px;line-height:1.2;font-weight:700;margin:0 0 6px;letter-spacing:-.015em;overflow-wrap:anywhere}
+.intro{color:var(--encre-douce);margin:0 0 26px;font-size:16px}
+
+.principal{
+  display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  min-height:56px;padding:16px 20px;background:var(--accent);color:var(--sur-accent);
+  text-decoration:none;font-size:17px;font-weight:600;border-radius:var(--rayon);
+  transition:background-color 140ms ease;
+}
+.principal:hover,.principal:focus-visible,.principal:active{background:var(--accent-vif)}
+.principal svg{width:19px;height:19px;flex:none}
+
+.etiquette{
+  display:flex;align-items:center;gap:12px;margin:34px 0 2px;
+  font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--encre-douce);
+}
+.etiquette::after{content:"";flex:1;height:1px;background:var(--trait)}
+
+ul{list-style:none;margin:0;padding:0}
+li+li{border-top:1px solid var(--trait)}
+li a{
+  display:flex;align-items:center;gap:14px;min-height:58px;padding:14px 2px;
+  color:var(--encre);text-decoration:none;font-weight:500;
+  transition:color 140ms ease;
+}
+li a:hover,li a:focus-visible{color:var(--accent)}
+.icone{flex:none;width:22px;height:22px;color:var(--encre-douce);transition:color 140ms ease}
+li a:hover .icone,li a:focus-visible .icone{color:var(--accent)}
+.libelle{flex:1;min-width:0;overflow-wrap:anywhere}
+.chevron{flex:none;width:15px;height:15px;color:var(--encre-douce)}
+
+footer{margin-top:36px;padding-top:20px;border-top:1px solid var(--trait);text-align:center}
+footer a{color:var(--encre-douce);font-size:13px;text-decoration:none;transition:color 140ms ease}
+footer a:hover,footer a:focus-visible{color:var(--encre)}
+
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+
+@media (prefers-reduced-motion:no-preference){
+  @keyframes apparition{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+  main>*{animation:apparition 420ms cubic-bezier(.2,.6,.3,1) both}
+  main>*:nth-child(2){animation-delay:50ms}
+  main>*:nth-child(3){animation-delay:90ms}
+  main>*:nth-child(4){animation-delay:130ms}
+  main>*:nth-child(5){animation-delay:180ms}
+  main>*:nth-child(6){animation-delay:210ms}
+}
 `;
 
-function pageLiens(client, liens) {
-  const items = liens
-    .map(
-      (lien, index) =>
-        `<li><a href="/${client.code}/l/${index}" rel="noopener">${echapper(lien.label)}</a></li>`,
-    )
-    .join('');
+// Pictogrammes au trait, dans le même registre que ceux du site vitrine.
+// Aucun logo de marque n'est reproduit : ce sont des formes simplifiées.
+const PICTOS = {
+  instagram: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1"/>',
+  facebook: '<rect x="3" y="3" width="18" height="18" rx="4.5"/><path d="M15 8h-1.3c-.9 0-1.7.8-1.7 1.7V19"/><path d="M10 12.5h4.5"/>',
+  linkedin: '<rect x="3" y="3" width="18" height="18" rx="4.5"/><path d="M7.6 10.5V17"/><circle cx="7.6" cy="7.4" r="1"/><path d="M11.4 17v-6.5"/><path d="M11.4 13.4a2.6 2.6 0 0 1 5.2 0V17"/>',
+  youtube: '<rect x="2.5" y="5.8" width="19" height="12.4" rx="3.6"/><path d="M10.4 9.4l5 2.6-5 2.6z"/>',
+  tiktok: '<path d="M9.6 11.4a3.9 3.9 0 1 0 3.9 3.9V3.4c.7 2.1 2.4 3.5 4.6 3.7"/>',
+  x: '<path d="M4.4 4.4l15.2 15.2"/><path d="M19.6 4.4L4.4 19.6"/>',
+  whatsapp: '<path d="M20.4 11.8a8.4 8.4 0 0 1-12.4 7.4L3.6 20.4l1.3-4.3a8.4 8.4 0 1 1 15.5-4.3z"/><path d="M9.2 9.6c.4 1.6 1.8 3.4 3.6 4.2"/>',
+  maps: '<path d="M12 21.2s7.1-6.5 7.1-11.2a7.1 7.1 0 0 0-14.2 0c0 4.7 7.1 11.2 7.1 11.2z"/><circle cx="12" cy="10" r="2.6"/>',
+  site: '<circle cx="12" cy="12" r="9"/><path d="M3.2 12h17.6"/><path d="M12 3a13.6 13.6 0 0 1 0 18a13.6 13.6 0 0 1 0-18z"/>',
+  crayon: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14.5 5.5l4 4"/>',
+  chevron: '<path d="M9 5.5l6.5 6.5L9 18.5"/>',
+};
 
+function picto(nom, classe) {
+  return (
+    `<svg class="${classe}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ` +
+    `stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${PICTOS[nom]}</svg>`
+  );
+}
+
+// Choisit le pictogramme d'un lien d'après son domaine. Le libellé saisi par
+// l'administrateur n'est jamais interprété : seule l'URL décide.
+function pictoDuLien(url) {
+  let hote = '';
+  try {
+    hote = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+  } catch {
+    return 'site';
+  }
+  const correspondances = [
+    [/(^|\.)instagram\.com$/, 'instagram'],
+    [/(^|\.)(facebook\.com|fb\.com|fb\.me)$/, 'facebook'],
+    [/(^|\.)linkedin\.com$/, 'linkedin'],
+    [/(^|\.)(youtube\.com|youtu\.be)$/, 'youtube'],
+    [/(^|\.)tiktok\.com$/, 'tiktok'],
+    [/(^|\.)(twitter\.com|x\.com)$/, 'x'],
+    [/(^|\.)(wa\.me|whatsapp\.com)$/, 'whatsapp'],
+    [/(^|\.)(google\.[a-z.]+|goo\.gl|maps\.app\.goo\.gl)$/, 'maps'],
+  ];
+  for (const [motif, nom] of correspondances) if (motif.test(hote)) return nom;
+  return 'site';
+}
+
+// Deux initiales au maximum, en ignorant les articles courants.
+function initiales(nom) {
+  const ignores = new Set(['le', 'la', 'les', 'l', 'du', 'de', 'des', 'd', 'au', 'aux', 'chez']);
+  const mots = String(nom)
+    .split(/[\s'’\-_.]+/)
+    .filter(Boolean);
+  const utiles = mots.filter((mot) => !ignores.has(mot.toLowerCase()));
+  const source = utiles.length ? utiles : mots;
+  const lettres = source.slice(0, 2).map((mot) => Array.from(mot)[0] || '').join('');
+  return (lettres || '?').toUpperCase();
+}
+
+function enveloppe({ titre, contenu, themeClair = '#ffffff', themeSombre = '#15181b' }) {
   return `<!DOCTYPE html>
 <html lang="fr-CH">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${echapper(client.nom_commerce)}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>${echapper(titre)}</title>
 <meta name="robots" content="noindex">
+<meta name="theme-color" media="(prefers-color-scheme:light)" content="${themeClair}">
+<meta name="theme-color" media="(prefers-color-scheme:dark)" content="${themeSombre}">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>${STYLE_PUBLIC}</style>
 </head>
 <body>
 <main>
-  <h1>${echapper(client.nom_commerce)}</h1>
-  <p class="intro">Merci de votre visite.</p>
-  <a class="principal" href="/${client.code}/a" rel="noopener">Laisser un avis Google</a>
-  ${items ? `<ul>${items}</ul>` : ''}
-  <footer><a href="/">Plaque fournie par tapfacile</a></footer>
+${contenu}
 </main>
 </body>
 </html>`;
 }
 
+function pied(texte) {
+  return `  <footer><a href="/">${texte}</a></footer>`;
+}
+
+function pageLiens(client, liens) {
+  const items = liens
+    .map((lien, index) => {
+      return (
+        `<li><a href="/${client.code}/l/${index}" rel="noopener">` +
+        picto(pictoDuLien(lien.url), 'icone') +
+        `<span class="libelle">${echapper(lien.label)}</span>` +
+        picto('chevron', 'chevron') +
+        `</a></li>`
+      );
+    })
+    .join('');
+
+  const bloquLiens = items
+    ? `  <p class="etiquette">Retrouvez-nous</p>\n  <ul>${items}</ul>`
+    : '';
+
+  return enveloppe({
+    titre: client.nom_commerce,
+    contenu: [
+      `  <div class="monogramme" aria-hidden="true">${echapper(initiales(client.nom_commerce))}</div>`,
+      `  <h1>${echapper(client.nom_commerce)}</h1>`,
+      `  <p class="intro">Merci de votre visite.</p>`,
+      `  <a class="principal" href="/${client.code}/a" rel="noopener">${picto('crayon', '')}Laisser un avis Google</a>`,
+      bloquLiens,
+      pied('Plaque fournie par tapfacile'),
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  });
+}
+
 function pageInconnue() {
   return html(
-    `<!DOCTYPE html>
-<html lang="fr-CH">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Adresse inconnue</title>
-<meta name="robots" content="noindex">
-<style>${STYLE_PUBLIC}</style>
-</head>
-<body>
-<main>
-  <h1>Adresse inconnue</h1>
-  <p class="intro">Cette adresse ne correspond à aucune plaque. Vérifiez le code inscrit sur le chevalet, ou cherchez le commerce directement dans Google Maps.</p>
-  <footer><a href="/">tapfacile</a></footer>
-</main>
-</body>
-</html>`,
+    enveloppe({
+      titre: 'Adresse inconnue',
+      contenu: [
+        `  <h1>Adresse inconnue</h1>`,
+        `  <p class="intro">Cette adresse ne correspond à aucune plaque. Vérifiez le code inscrit sur le chevalet, ou cherchez le commerce directement dans Google Maps.</p>`,
+        pied('tapfacile'),
+      ].join('\n'),
+    }),
     404,
   );
 }
 
 function pageDesactivee(client) {
   return html(
-    `<!DOCTYPE html>
-<html lang="fr-CH">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${echapper(client.nom_commerce)}</title>
-<meta name="robots" content="noindex">
-<style>${STYLE_PUBLIC}</style>
-</head>
-<body>
-<main>
-  <h1>Plaque hors service</h1>
-  <p class="intro">Cette plaque n'est plus active. Si vous souhaitez laisser un avis sur ${echapper(
-    client.nom_commerce,
-  )}, cherchez le commerce directement dans Google Maps.</p>
-  <footer><a href="/">tapfacile</a></footer>
-</main>
-</body>
-</html>`,
+    enveloppe({
+      titre: client.nom_commerce,
+      contenu: [
+        `  <h1>Plaque hors service</h1>`,
+        `  <p class="intro">Cette plaque n'est plus active. Si vous souhaitez laisser un avis sur ${echapper(
+          client.nom_commerce,
+        )}, cherchez le commerce directement dans Google Maps.</p>`,
+        pied('tapfacile'),
+      ].join('\n'),
+    }),
     410,
   );
 }
