@@ -3,8 +3,13 @@
 Site vitrine + gestion des plaques NFC/QR des commerces.
 
 - Le site vitrine est du HTML et du CSS statiques, écrits à la main, sans framework ni build.
-- La partie dynamique (redirections `/XXXX`, comptage, administration) tourne sur
-  Cloudflare Pages Functions avec une base D1.
+  Les fichiers vivent dans `public/` et sont servis tels quels.
+- La partie dynamique (redirections `/XXXX`, comptage, administration) est un Cloudflare
+  Worker (`src/index.js`) adossé à une base D1.
+
+Les fichiers statiques sont servis **avant** que le Worker ne soit appelé : celui-ci ne
+s'exécute que pour les chemins sans fichier correspondant, c'est-à-dire les codes de
+plaque et l'API.
 
 ## Sommaire
 
@@ -33,7 +38,7 @@ Deux modes par commerce :
 | `redirect` (par défaut) | Redirection immédiate vers la page d'avis Google. C'est le mode le plus direct, celui décrit sur la page d'accueil. |
 | `page` | Une page de liens minimale : bouton « Laisser un avis Google » en tête, puis les liens du commerce (site internet, réseaux sociaux). |
 
-Routes servies par la Function :
+Routes servies par le Worker :
 
 ```
 /AB3K          plaque : redirection ou page de liens
@@ -67,16 +72,22 @@ un identifiant.
 
 ### 2. Reporter l'identifiant dans wrangler.toml
 
-Étape à ne pas sauter : lorsqu'un `wrangler.toml` est présent dans le dépôt, Cloudflare
-Pages l'utilise et **ignore les bindings configurés dans le dashboard**. Tant que le
-placeholder `D1_DATABASE_ID` y figure, la base n'est pas reliée et l'administration
-renvoie une erreur.
+Étape à ne pas sauter : c'est `wrangler.toml` qui relie le Worker à la base, pas le
+dashboard. Tant que le placeholder `D1_DATABASE_ID` y figure, l'administration renvoie
+une erreur.
 
-Éditer `wrangler.toml` (directement sur GitHub) :
+Éditer `wrangler.toml` — seule la valeur entre guillemets change :
 
 ```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "tapfacile"
 database_id = "identifiant-copié-à-l-étape-1"
 ```
+
+Attention à la syntaxe TOML : `[[d1_databases]]` prend une **double** paire de crochets,
+et le nom doit rester à l'intérieur. Un `[]` seul rend le fichier invalide et fait
+échouer le build avec `Invalid TOML document`.
 
 ### 3. Créer les tables
 
@@ -90,14 +101,18 @@ En ligne de commande depuis une copie locale du dépôt, l'équivalent est :
 npx wrangler d1 execute tapfacile --remote --file=./schema.sql
 ```
 
-### 4. Créer le projet Pages
+### 4. Créer le Worker
 
-**Workers & Pages → Create → Pages → Connect to Git**, sélectionner ce dépôt.
+**Workers & Pages → Create application → Import a repository**, sélectionner ce dépôt.
 
 - Production branch : la branche par défaut du dépôt
-- Framework preset : None
 - Build command : (vide, aucun build)
-- Build output directory : `/`
+- Deploy command : `npx wrangler deploy`
+
+Ce projet est un **Worker avec fichiers statiques**, pas un projet Pages. Les comptes
+Cloudflare récents ne proposent plus la création de projets Pages, et le Worker est de
+toute façon la forme recommandée aujourd'hui. Tout est décrit dans `wrangler.toml` :
+le point d'entrée (`main`), le dossier statique (`[assets]`) et la base (`[[d1_databases]]`).
 
 ### 5. Définir le jeton d'administration
 
@@ -115,19 +130,20 @@ ou, sous macOS et Linux :
 openssl rand -base64 32
 ```
 
-Puis, dans le projet Pages : **Settings → Variables and Secrets → Add**, type **Secret**
-(pas « Text »), nom `ADMIN_TOKEN`, valeur générée.
+Puis, dans le Worker : **Settings → Variables and Secrets → Add**, type **Secret**
+(pas « Text »), nom `ADMIN_TOKEN`, valeur générée. Conserver cette valeur : elle n'est
+plus affichable ensuite.
 
 Tant que `ADMIN_TOKEN` n'est pas défini, l'API d'administration refuse toutes les
 requêtes (erreur 503). C'est volontaire : jamais d'administration ouverte par défaut.
 
 ### 6. Redéployer
 
-Les bindings et les secrets ne s'appliquent qu'aux **nouveaux** déploiements :
-onglet **Deployments** → dernier déploiement → **Retry deployment**.
+Les secrets ne s'appliquent qu'aux **nouveaux** déploiements : onglet **Deployments** →
+dernier déploiement → **Retry deployment**.
 
-Tester `https://<projet>.pages.dev/admin/` : le jeton doit être accepté et la liste
-s'afficher, vide.
+Tester `https://<projet>.<sous-domaine>.workers.dev/admin/` : le jeton doit être accepté
+et la liste s'afficher, vide.
 
 ### 7. Rattacher le domaine
 
@@ -148,6 +164,7 @@ source sur **None**. Le fichier `CNAME` devient alors sans objet.
 |---|---|---|
 | `wrangler d1 create` → `Authentication error [code: 10000]` | Workers/D1 jamais activé sur le compte | Créer la base une première fois depuis le dashboard (étape 1) |
 | `Unable to read SQL text file "./schema.sql"` | Commande lancée hors du dépôt, ou pas de copie locale | Passer par la console D1 (étape 3) |
+| `Invalid TOML document ... [] ` | `[[d1_databases]]` amputé lors d'une édition | Rétablir la double paire de crochets (étape 2) |
 | `/admin/` répond 503 | `ADMIN_TOKEN` absent | Étape 5, puis redéployer |
 | `/admin/` affiche une erreur de base | `D1_DATABASE_ID` encore en placeholder | Étape 2, puis redéployer |
 
@@ -167,7 +184,7 @@ Créer une plaque sur place :
    avec une application comme NFC Tools.
 5. **Télécharger le SVG** du QR code pour l'impression du chevalet.
 
-Le QR code est généré à la volée par `lib/qr.js` (encodeur écrit à la main, sans
+Le QR code est généré à la volée par `src/qr.js` (encodeur écrit à la main, sans
 dépendance ni service externe).
 
 ### Obtenir le lien de la page d'avis d'un commerce
@@ -185,19 +202,19 @@ c'est l'argument central de la page d'accueil, autant s'y tenir dans l'outil.
 
 | Placeholder | Où | À remplacer par |
 |---|---|---|
-| `NOM` | index.html, confidentialite.html, mentions.html | Votre nom |
-| `ADRESSE` | mentions.html, JSON-LD (index.html) | Adresse postale complète |
-| `TELEPHONE` | index.html, mentions.html, JSON-LD | Numéro, format `+41 XX XXX XX XX` à l'affichage et `+41XXXXXXXXX` dans les liens `tel:` |
-| `EMAIL` | index.html, confidentialite.html, mentions.html, JSON-LD | Adresse e-mail sur le domaine tapfacile.ch (exigée par Google pour l'API Business Profile) |
-| `FORMSPREE_ID` | index.html | Identifiant du formulaire Formspree |
-| `CODE_POSTAL` | index.html (JSON-LD) | Code postal |
-| `LATITUDE` / `LONGITUDE` | index.html (JSON-LD) | Coordonnées GPS |
-| `LINKEDIN_URL` | index.html (« Qui suis-je ») | Lien vers votre profil LinkedIn |
-| `D1_DATABASE_ID` | wrangler.toml | Identifiant renvoyé par `wrangler d1 create` |
-| `photo-fondateur.jpg` | fichier à ajouter à la racine | Photo de vous, carrée de préférence. Affichée en niveaux de gris par le CSS : inutile de la désaturer. |
+| `NOM` | public/index.html, public/confidentialite.html, public/mentions.html | Votre nom |
+| `ADRESSE` | public/mentions.html, JSON-LD (public/index.html) | Adresse postale complète |
+| `TELEPHONE` | public/index.html, public/mentions.html, JSON-LD | Numéro, format `+41 XX XXX XX XX` à l'affichage et `+41XXXXXXXXX` dans les liens `tel:` |
+| `EMAIL` | public/index.html, public/confidentialite.html, public/mentions.html, JSON-LD | Adresse e-mail sur le domaine tapfacile.ch (exigée par Google pour l'API Business Profile) |
+| `FORMSPREE_ID` | public/index.html | Identifiant du formulaire Formspree |
+| `CODE_POSTAL` | public/index.html (JSON-LD) | Code postal |
+| `LATITUDE` / `LONGITUDE` | public/index.html (JSON-LD) | Coordonnées GPS |
+| `LINKEDIN_URL` | public/index.html (« Qui suis-je ») | Lien vers votre profil LinkedIn |
+| `D1_DATABASE_ID` | wrangler.toml | Identifiant de la base D1 |
+| `photo-fondateur.jpg` | fichier à ajouter dans `public/` | Photo de vous, carrée de préférence. Affichée en niveaux de gris par le CSS : inutile de la désaturer. |
 
 ```
-grep -rn "NOM\|ADRESSE\|TELEPHONE\|EMAIL\|FORMSPREE_ID\|CODE_POSTAL\|LATITUDE\|LONGITUDE\|LINKEDIN_URL" *.html
+grep -rn "NOM\|ADRESSE\|TELEPHONE\|EMAIL\|FORMSPREE_ID\|CODE_POSTAL\|LATITUDE\|LONGITUDE\|LINKEDIN_URL" public/*.html
 ```
 
 ## Développement local
@@ -205,7 +222,7 @@ grep -rn "NOM\|ADRESSE\|TELEPHONE\|EMAIL\|FORMSPREE_ID\|CODE_POSTAL\|LATITUDE\|L
 ```
 npm install --no-save wrangler
 npx wrangler d1 execute tapfacile --local --file=./schema.sql
-npx wrangler pages dev . --local --binding ADMIN_TOKEN=jeton-de-test
+npx wrangler dev --local --var ADMIN_TOKEN:jeton-de-test
 ```
 
 Le site est alors sur `http://localhost:8788`, l'administration sur
@@ -217,20 +234,23 @@ une redirection en ligne de commande, passez un User-Agent de navigateur avec `-
 ## Structure
 
 ```
-index.html            page d'accueil
-confidentialite.html  politique de confidentialité (LPD)
-mentions.html         mentions légales
-style.css             feuille de style du site vitrine
-favicon.svg           favicon (carré + symbole NFC)
-admin/index.html      interface d'administration (mobile-first)
-functions/[[path]].js routeur des parties dynamiques
-lib/qr.js             encodeur QR (mode octet, correction M, versions 1 à 3)
-schema.sql            schéma de la base D1
-wrangler.toml         configuration Cloudflare
-_routes.json          chemins servis en statique plutôt que par la Function
-robots.txt
-sitemap.xml
+public/                     tout ce qui est servi tel quel
+  index.html                page d'accueil
+  confidentialite.html      politique de confidentialité (LPD)
+  mentions.html             mentions légales
+  style.css                 feuille de style du site vitrine
+  favicon.svg               favicon (carré + symbole NFC)
+  admin/index.html          interface d'administration (mobile-first)
+  robots.txt
+  sitemap.xml
+src/index.js                Worker : plaques, comptage, API d'administration
+src/qr.js                   encodeur QR (mode octet, correction M, versions 1 à 3)
+schema.sql                  schéma de la base D1
+wrangler.toml               configuration Cloudflare
 ```
+
+Rien d'autre que `public/` n'est exposé publiquement : le code source, le schéma et la
+configuration ne sont pas servis.
 
 Aucun fichier à la racine ne porte un nom de 4 caractères : cet espace est réservé aux
 codes courts des plaques.

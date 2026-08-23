@@ -5,9 +5,10 @@
 //   /AB3K/l/2        clic sur le lien numéro 2 de la page de liens
 //   /api/...         interface d'administration, protégée par ADMIN_TOKEN
 //
-// Tout le reste est laissé aux fichiers statiques via next().
+// Les fichiers statiques de public/ sont servis avant que ce Worker ne soit appelé :
+// seules les requêtes sans fichier correspondant arrivent ici.
 
-import { qrSvg } from '../lib/qr.js';
+import { qrSvg } from './qr.js';
 
 const CODE_RE = /^[A-Z0-9]{4}$/;
 // Alphabet sans caractères ambigus (ni O/0, ni I/L/1) : les codes sont lus et dictés à voix haute.
@@ -15,7 +16,16 @@ const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const MAX_LIENS = 8;
 const ROBOTS = 'noindex, nofollow';
 
-export async function onRequest(context) {
+export default {
+  async fetch(request, env, ctx) {
+    // Les fonctions internes reçoivent un contexte de forme stable, indépendante
+    // de la plateforme : request, env et waitUntil.
+    const context = { request, env, waitUntil: (promesse) => ctx.waitUntil(promesse) };
+    return routerPrincipal(context);
+  },
+};
+
+async function routerPrincipal(context) {
   const { request } = context;
   const url = new URL(request.url);
   const segments = url.pathname.split('/').filter(Boolean);
@@ -37,7 +47,8 @@ export async function onRequest(context) {
     }
   }
 
-  return context.next();
+  // Aucun fichier statique ne correspond et le chemin n'est ni une plaque ni l'API.
+  return context.env.ASSETS.fetch(request);
 }
 
 /* ------------------------------------------------------------------ plaques */

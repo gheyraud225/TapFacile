@@ -1,6 +1,13 @@
 name = "tapfacile"
+main = "src/index.js"
 compatibility_date = "2026-08-01"
-pages_build_output_dir = "."
+
+# Les fichiers de public/ sont servis directement, sans passer par le Worker.
+# Celui-ci n'est appelé que pour les chemins sans fichier correspondant :
+# les codes de plaque (/AB3K) et l'API d'administration (/api/...).
+[assets]
+directory = "./public"
+binding = "ASSETS"
 
 # La double paire de crochets est obligatoire : elle déclare un élément de la liste
 # des bases D1. Ne pas la remplacer par [d1_databases] ni par [].
