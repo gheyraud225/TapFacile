@@ -43,7 +43,9 @@
 
     <h2>Statistiques d'utilisation des plaques</h2>
     <p>Pour chaque plaque installée, le nombre d'utilisations est comptabilisé, avec la date, l'heure, le type d'appareil utilisé (iOS, Android ou autre) et la destination atteinte (page d'avis, site internet du commerce, réseau social). Ces statistiques servent uniquement à établir le bilan mensuel transmis au commerçant.</p>
-    <p>Aucune adresse IP n'est enregistrée, aucun cookie n'est déposé, aucun identifiant de session n'est créé, et aucune donnée ne permet d'identifier la personne qui a utilisé la plaque ni de relier entre elles deux utilisations successives.</p>
+    <p>Aucun cookie n'est déposé et aucun identifiant de session n'est créé.</p>
+    <p>Pour éviter de comptabiliser plusieurs fois la même utilisation — un rechargement de page, un retour en arrière, un double appui —, une empreinte technique est calculée à partir de l'adresse IP et du type de navigateur, combinés à un secret renouvelé chaque jour. Cette empreinte est irréversible : elle ne permet pas de retrouver l'adresse IP, laquelle n'est à aucun moment enregistrée. L'empreinte est supprimée après deux minutes et le secret du jour après deux jours ; passé ce délai, deux utilisations ne peuvent plus être reliées entre elles.</p>
+    <p>Aucune donnée collectée ne permet d'identifier la personne qui a utilisé la plaque.</p>
 
     <h2>Pas de traceurs ni de revente</h2>
     <p>Le site n'utilise aucun traceur publicitaire ni aucun outil d'analyse tiers (type Google Analytics). Aucune donnée n'est vendue ni transmise à des fins commerciales à des tiers.</p>

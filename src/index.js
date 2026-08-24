@@ -102,14 +102,29 @@ function redirection(destination) {
   });
 }
 
+// Deux minutes : assez pour absorber un rechargement, un retour en arrière ou un
+// double appui, assez court pour ne pas fusionner deux vrais clients derrière le
+// même wifi de commerce — les iPhone présentent des User-Agent quasi identiques,
+// une fenêtre longue les confondrait et sous-compterait les visites.
+const FENETRE_DEDOUBLONNAGE_S = 120;
+
 /**
- * Enregistre une visite. Volontairement sans adresse IP, sans cookie et sans
- * identifiant : la politique de confidentialité publiée s'y engage.
- * Les robots d'aperçu de lien sont ignorés pour que les bilans mensuels restent honnêtes.
+ * Enregistre une visite, sans cookie ni identifiant de session.
+ *
+ * Pour ne pas compter plusieurs fois la même utilisation, une empreinte est
+ * calculée à partir de l'adresse IP et du User-Agent, salée avec un secret
+ * renouvelé chaque jour. L'adresse IP n'est jamais enregistrée, l'empreinte est
+ * irréversible et supprimée au bout de deux minutes : passé ce délai, deux
+ * utilisations ne peuvent plus être reliées entre elles.
  */
 function compter(context, code, cible) {
-  const ua = context.request.headers.get('user-agent') || '';
+  const { request, env } = context;
+  const ua = request.headers.get('user-agent') || '';
+
+  // Seules les vraies navigations comptent.
+  if (request.method !== 'GET') return;
   if (estRobot(ua)) return;
+  if (estPrechargement(request)) return;
 
   const maintenant = new Date();
   const jour = new Intl.DateTimeFormat('en-CA', {
@@ -119,12 +134,69 @@ function compter(context, code, cible) {
     day: '2-digit',
   }).format(maintenant);
 
-  const requete = context.env.DB.prepare(
-    'INSERT INTO visites (code, horodatage, jour, appareil, cible) VALUES (?, ?, ?, ?, ?)',
-  ).bind(code, maintenant.toISOString(), jour, familleAppareil(ua), cible);
+  // La réponse ne doit pas attendre l'écriture.
+  context.waitUntil(
+    enregistrerVisite(env, { code, cible, ua, jour, maintenant, request }).catch(() => {}),
+  );
+}
 
-  // La redirection ne doit pas attendre l'écriture.
-  context.waitUntil(requete.run().catch(() => {}));
+async function enregistrerVisite(env, { code, cible, ua, jour, maintenant, request }) {
+  const sel = await selDuJour(env.DB, jour);
+  const ip = request.headers.get('cf-connecting-ip') || '';
+  const empreinte = await empreinteVisite(sel, code, cible, ip, ua);
+
+  const expire = new Date(maintenant.getTime() + FENETRE_DEDOUBLONNAGE_S * 1000).toISOString();
+
+  // La purge précède l'insertion : une empreinte expirée ne doit pas bloquer le
+  // comptage. INSERT OR IGNORE rend la vérification atomique, sans lecture préalable.
+  const resultats = await env.DB.batch([
+    env.DB.prepare('DELETE FROM empreintes WHERE expire_le < ?').bind(maintenant.toISOString()),
+    env.DB.prepare('INSERT OR IGNORE INTO empreintes (empreinte, expire_le) VALUES (?, ?)').bind(
+      empreinte,
+      expire,
+    ),
+  ]);
+
+  const premiereFois = (resultats[1]?.meta?.changes ?? 0) === 1;
+  if (!premiereFois) return;
+
+  await env.DB.prepare(
+    'INSERT INTO visites (code, horodatage, jour, appareil, cible) VALUES (?, ?, ?, ?, ?)',
+  )
+    .bind(code, maintenant.toISOString(), jour, familleAppareil(ua), cible)
+    .run();
+}
+
+async function empreinteVisite(sel, code, cible, ip, ua) {
+  const donnees = new TextEncoder().encode(`${sel}|${code}|${cible}|${ip}|${ua}`);
+  const condensat = await crypto.subtle.digest('SHA-256', donnees);
+  return [...new Uint8Array(condensat)]
+    .slice(0, 16)
+    .map((octet) => octet.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
+ * Sel du jour, tiré au hasard à sa première utilisation. Les sels de plus de deux
+ * jours sont supprimés : les empreintes anciennes deviennent alors irrécupérables,
+ * même à partir d'une sauvegarde.
+ */
+async function selDuJour(db, jour) {
+  const existant = await db.prepare('SELECT valeur FROM sels WHERE jour = ?').bind(jour).first();
+  if (existant) return existant.valeur;
+
+  const valeur = [...crypto.getRandomValues(new Uint8Array(16))]
+    .map((octet) => octet.toString(16).padStart(2, '0'))
+    .join('');
+
+  await db.batch([
+    db.prepare('INSERT OR IGNORE INTO sels (jour, valeur) VALUES (?, ?)').bind(jour, valeur),
+    db.prepare("DELETE FROM sels WHERE jour < date(?, '-2 day')").bind(jour),
+  ]);
+
+  // Relecture : une requête concurrente a pu insérer son propre sel en premier.
+  const relu = await db.prepare('SELECT valeur FROM sels WHERE jour = ?').bind(jour).first();
+  return relu ? relu.valeur : valeur;
 }
 
 function familleAppareil(ua) {
@@ -134,9 +206,20 @@ function familleAppareil(ua) {
 }
 
 function estRobot(ua) {
-  return /bot|crawl|spider|preview|facebookexternalhit|whatsapp|slackbot|telegram|discord|curl|wget|headless|lighthouse|monitor/i.test(
+  return /bot|crawl|spider|preview|facebookexternalhit|whatsapp|slackbot|telegram|discord|curl|wget|python-requests|okhttp|headless|lighthouse|monitor|pingdom|uptime/i.test(
     ua,
   );
+}
+
+// Le navigateur annonce lui-même les chargements anticipés : ce ne sont pas des visites.
+function estPrechargement(request) {
+  const entetes = [
+    request.headers.get('sec-purpose'),
+    request.headers.get('purpose'),
+    request.headers.get('x-purpose'),
+    request.headers.get('x-moz'),
+  ];
+  return entetes.some((valeur) => valeur && /prefetch|preview|prerender/i.test(valeur));
 }
 
 function analyserLiens(brut) {
@@ -240,6 +323,8 @@ const PICTOS = {
   whatsapp: '<path d="M20.4 11.8a8.4 8.4 0 0 1-12.4 7.4L3.6 20.4l1.3-4.3a8.4 8.4 0 1 1 15.5-4.3z"/><path d="M9.2 9.6c.4 1.6 1.8 3.4 3.6 4.2"/>',
   maps: '<path d="M12 21.2s7.1-6.5 7.1-11.2a7.1 7.1 0 0 0-14.2 0c0 4.7 7.1 11.2 7.1 11.2z"/><circle cx="12" cy="10" r="2.6"/>',
   site: '<circle cx="12" cy="12" r="9"/><path d="M3.2 12h17.6"/><path d="M12 3a13.6 13.6 0 0 1 0 18a13.6 13.6 0 0 1 0-18z"/>',
+  telephone: '<path d="M6.4 3.5h3l1.5 3.7-2 1.4a11 11 0 0 0 5.5 5.5l1.4-2 3.7 1.5v3a1.9 1.9 0 0 1-2.1 1.9A15.6 15.6 0 0 1 4.5 5.6a1.9 1.9 0 0 1 1.9-2.1z"/>',
+  courriel: '<rect x="2.8" y="5" width="18.4" height="14" rx="2.4"/><path d="M3.4 7.2l8.6 6 8.6-6"/>',
   crayon: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14.5 5.5l4 4"/>',
   chevron: '<path d="M9 5.5l6.5 6.5L9 18.5"/>',
 };
@@ -256,7 +341,10 @@ function picto(nom, classe) {
 function pictoDuLien(url) {
   let hote = '';
   try {
-    hote = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    const analysee = new URL(url);
+    if (analysee.protocol === 'tel:') return 'telephone';
+    if (analysee.protocol === 'mailto:') return 'courriel';
+    hote = analysee.hostname.toLowerCase().replace(/^www\./, '');
   } catch {
     return 'site';
   }
@@ -576,7 +664,9 @@ function validerChamps(corps) {
     if (!label && !lien) continue;
     if (!label) return { erreur: 'chaque lien doit porter un intitulé' };
     if (label.length > 60) return { erreur: 'intitulé de lien trop long (60 caractères maximum)' };
-    if (!urlValide(lien)) return { erreur: `lien invalide pour « ${label} »` };
+    if (!lienValide(lien)) {
+      return { erreur: `lien invalide pour « ${label} » : attendu https://…, tel:… ou mailto:…` };
+    }
     liens.push({ label, url: lien });
   }
 
@@ -585,6 +675,7 @@ function validerChamps(corps) {
   return { nom_commerce: nom, avis_url: avis, mode, liens, note };
 }
 
+// La destination des avis reste strictement une page web.
 function urlValide(valeur) {
   try {
     const url = new URL(valeur);
@@ -592,6 +683,21 @@ function urlValide(valeur) {
   } catch {
     return false;
   }
+}
+
+// Les liens du commerce acceptent en plus le téléphone et le courriel, très
+// utiles sur un mobile. Toute autre famille de schéma reste refusée.
+function lienValide(valeur) {
+  let url;
+  try {
+    url = new URL(valeur);
+  } catch {
+    return false;
+  }
+  if (url.protocol === 'https:' || url.protocol === 'http:') return true;
+  if (url.protocol === 'tel:') return /^[+0-9 ().-]{4,25}$/.test(decodeURIComponent(url.pathname));
+  if (url.protocol === 'mailto:') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(decodeURIComponent(url.pathname));
+  return false;
 }
 
 async function genererCode(db) {

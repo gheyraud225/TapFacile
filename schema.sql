@@ -26,3 +26,20 @@ CREATE TABLE IF NOT EXISTS visites (
 
 CREATE INDEX IF NOT EXISTS idx_visites_code_jour ON visites (code, jour);
 CREATE INDEX IF NOT EXISTS idx_visites_jour ON visites (jour);
+
+-- Dédoublonnage des utilisations : un rechargement ou un retour en arrière ne doit
+-- pas gonfler le bilan. Une empreinte irréversible remplace l'adresse IP, et vit
+-- deux minutes. Rien ici ne permet de remonter à une personne.
+CREATE TABLE IF NOT EXISTS empreintes (
+  empreinte  TEXT PRIMARY KEY,
+  expire_le  TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_empreintes_expire ON empreintes (expire_le);
+
+-- Sel renouvelé chaque jour et supprimé au bout de deux jours : les empreintes
+-- passées deviennent alors irrécupérables, y compris depuis une sauvegarde.
+CREATE TABLE IF NOT EXISTS sels (
+  jour    TEXT PRIMARY KEY,
+  valeur  TEXT NOT NULL
+);

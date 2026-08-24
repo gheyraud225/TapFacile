@@ -174,6 +174,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 
       <div id="bloc-liens" class="masque">
         <label>Liens supplémentaires</label>
+        <p class="aide" style="margin:-14px 0 12px">Site, réseaux sociaux, mais aussi <code>tel:+41791234567</code> pour appeler ou <code>mailto:contact@commerce.ch</code> pour écrire. Le pictogramme est choisi automatiquement.</p>
         <div id="liens"></div>
         <button class="btn btn-secondaire" type="button" id="btn-ajout-lien">Ajouter un lien</button>
       </div>
@@ -512,7 +513,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
     const champUrl = document.createElement('input');
     champUrl.type = 'url';
     champUrl.inputMode = 'url';
-    champUrl.placeholder = 'https://…';
+    champUrl.placeholder = 'https://… tel:… mailto:…';
     champUrl.value = url;
 
     const supprimer = document.createElement('button');
